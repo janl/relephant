@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Relephant</title>
+  <!-- Bower modules live in /lib, modded versions of those files in /vendor -->
+  <script src="lib/jquery/dist/jquery.min.js"></script>
+  <script src="marked.js"></script>
+  <script src="highlight.pack.js"></script>
+  <script src="lib/codemirror/lib/codemirror.js"></script>
+  <script src="lib/codemirror/mode/xml/xml.js"></script>
+  <script src="vendor/codemirror/mode/markdown/markdown.js"></script>
+  <script src="lib/codemirror/mode/gfm/gfm.js"></script>
+  <script src="lib/codemirror/mode/javascript/javascript.js"></script>
+  <script src="lib/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+  <script src="lib/codemirror/mode/css/css.js"></script>
+  <script src="lib/codemirror/mode/clike/clike.js"></script>
+  <script src="lib/codemirror/addon/mode/overlay.js"></script>
+  <script src="vendor/codemirror/keymap/sublime.js"></script>
+  <script src="lib/codemirror/addon/fold/xml-fold.js"></script>
+  <script src="lib/codemirror/addon/fold/markdown-fold.js"></script>
+  <script src="lib/codemirror/addon/fold/indent-fold.js"></script>
+  <script src="lib/codemirror/addon/fold/foldcode.js"></script>
+  <script src="lib/codemirror/addon/fold/foldgutter.js"></script>
+  <script src="rawinflate.js"></script>
+  <script src="rawdeflate.js"></script>
+  <link rel="stylesheet" href="lib/codemirror/lib/codemirror.css">
+  <link rel="stylesheet" href="lib/codemirror/addon/fold/foldgutter.css">
+  <link rel="stylesheet" href="default.css">
+  <style>
+  html, body {height: 100%;}
+  .CodeMirror pre{
+    line-height: 14px;
+  }
+  #in, .CodeMirror{
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 50%;
+    overflow: auto;
+    font-size: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    height: 100%;
+  }
+  .CodeMirror-scroll {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  #out{
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 50%;
+    bottom: 0;
+    overflow: auto;
+    padding: 10px;
+    padding-left: 20px;
+    color: #444;
+    font-family:Georgia, Palatino, 'Palatino Linotype', Times, 'Times New Roman', serif;
+    font-size: 16px;
+    line-height: 1.5em
+  }
+
+  .cm-checkbox{
+    font-size: 0;
+    padding-right: 1rem;
+  }
+
+  .cm-checkbox:after{
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 14px;
+    position: absolute;
+    cursor: pointer;
+  }
+
+  .cm-emptyCheckbox:after{
+    background: url(images/radio-unchecked.svg) no-repeat;
+    background-size: 12px 12px;
+    background-position: 4px 2px;
+  }
+
+  .cm-checkedCheckbox:after{
+    background: url(images/checkmark-circle.svg) no-repeat;
+    background-size: 12px 12px;
+    background-position: 4px 2px;
+  }
+
+  .cm-waitingCheckbox:after{
+    background: url(images/arrow-right.svg) no-repeat;
+    background-size: 12px 12px;
+    background-position: 4px 2px;
+  }
+
+  .cm-actionCheckbox:after{
+    background: url(images/arrow-left.svg) no-repeat;
+    background-size: 12px 12px;
+    background-position: 4px 2px;
+  }
+
+  .cm-importantCheckbox:after{
+    background: url(images/notification.svg) no-repeat;
+    background-size: 12px 12px;
+    background-position: 4px 2px;
+  }
+
+  @media screen and (max-width: 1024px) {
+    #in {
+      display: none;
+    }
+    #out {
+      left: 0;
+      padding-left: 10px;
+    }
+  }
+
+  .view #in {
+    display: none;
+  }
+  .view #out {
+    left: 0;
+    padding-left: 10px;
+  }
+
+  a{ color: #0645ad; text-decoration:none;}
+  a:visited{ color: #0b0080; }
+  a:hover{ color: #06e; }
+  a:active{ color:#faa700; }
+  a:focus{ outline: thin dotted; }
+  a:hover, a:active{ outline: 0; }
+
+  p{margin:1em 0;}
+
+  img{max-width:100%;}
+
+  h1,h2,h3,h4,h5,h6{font-weight:normal;color:#111;line-height:1em;}
+  h4,h5,h6{ font-weight: bold; }
+  h1{ font-size:2.5em; }
+  h2{ font-size:2em; border-bottom:1px solid silver; padding-bottom: 5px; }
+  h3{ font-size:1.5em; }
+  h4{ font-size:1.2em; }
+  h5{ font-size:1em; }
+  h6{ font-size:0.9em; }
+
+  blockquote{color:#666666;margin:0;padding-left: 3em;border-left: 0.5em #EEE solid;}
+  hr { display: block; height: 2px; border: 0; border-top: 1px solid #aaa;border-bottom: 1px solid #eee; margin: 1em 0; padding: 0; }
+
+  pre, code{
+    color: #000;
+    font-family: monospace;
+    font-size: 0.88em;
+    border-radius:3px;
+    background-color: #F8F8F8;
+    border: 1px solid #CCC;
+  }
+  pre { white-space: pre; white-space: pre-wrap; word-wrap: break-word; padding: 5px;}
+  pre code { border: 0px !important; background: transparent !important; line-height: 1.3em; }
+  code { padding: 0 3px 0 3px; }
+  sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
+  sup { top: -0.5em; }
+  sub { bottom: -0.25em; }
+  ul, ol { margin: 1em 0; padding: 0 0 0 2em; }
+  li p:last-child { margin:0 }
+  dd { margin: 0 0 0 2em; }
+  img { border: 0; -ms-interpolation-mode: bicubic; vertical-align: middle; }
+  table { border-collapse: collapse; border-spacing: 0; }
+  td, th { vertical-align: top; padding: 4px 10px; border: 1px solid #bbb; }
+  tr:nth-child(even) td, tr:nth-child(even) th { background: #eee; }
+  </style>
+</head>
+<body>
+  <div id="in"><form><textarea id="code"># Relephant
+
+## Actual todos:
+
+- [x] Find out why inline markdown parsing is off
+- [x] Add sublime text shortcuts
+- [x] re-implement marked preview
+- [x] revert checking
+- [x] implement block fold toggling with shortcut (cmd-shift-a)
+- [ ] inverted folding (focus mode) with shortcuts
+- [ ] completed sub-tasks complete parent tasks
+  - [ ] recursively
+  - [x] 1 Seriously
+  - [x] 2 Seriously
+    - [ ] 3 Seriously
+  - [ ] 4 Seriously
+  - [ ] 5 Seriously
+    - [ ] 6 I mean it
+  - [ ] 7 Seriously
+    - [ ] 8 I mean it
+- [ ] make nice
+
+## Plugins I've modified:
+
+  - keymap/sublime.js (correct line up/line down bindings)
+  - mode/markdown/markdown.js (ignore list items)
+
+## Task Lists
+
+  - [ ] Incomplete task list item
+  - [x] **Completed** task list item
+  - [!] **Problematic** task list item
+  - [>] **Waiting** task list item
+  - [<] **Requires action** task list item
+
+I'm no good at writing sample / filler text, so go write something yourself.
+
+Look, a list!
+
+  * foo
+  * bar
+  * baz
+
+And here's some code!
+
+```javascript
+  $(function(){
+  $('div').html('I am a div.');
+});
+```
+
+This is [on GitHub](https://github.com/jbt/markdown-editor) so let me know if I've b0rked it somewhere.
+
+
+Props to Mr. Doob and his [code editor](http://mrdoob.com/projects/code-editor/), from which
+the inspiration to this, and some handy implementation hints, came.
+
+### Stuff used to make this:
+
+  * [marked](https://github.com/chjj) for Markdown parsing
+  * [CodeMirror](http://codemirror.net/) for the awesome syntax-highlighted editor
+  * [highlight.js](http://softwaremaniacs.org/soft/highlight/en/) for syntax highlighting in output code blocks
+  * [js-deflate](https://github.com/dankogai/js-deflate) for gzipping of data to make it fit in URLs
+</textarea></form></div>
+<div id="out"></div>
+
+<script>
+var URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+navigator.saveBlob = navigator.saveBlob || navigator.msSaveBlob || navigator.mozSaveBlob || navigator.webkitSaveBlob;
+window.saveAs = window.saveAs || window.webkitSaveAs || window.mozSaveAs || window.msSaveAs;
+
+    // Because highlight.js is a bit awkward at times
+    var languageOverrides = {
+      js: 'javascript',
+      html: 'xml'
+    }
+
+    marked.setOptions({
+      highlight: function(code, lang){
+        if(languageOverrides[lang]) lang = languageOverrides[lang];
+        return hljs.LANGUAGES[lang] ? hljs.highlight(lang, code).value : code;
+      }
+    });
+
+    function update(e){
+      var val = e.getValue();
+
+      setOutput(val);
+
+      clearTimeout(hashto);
+      hashto = setTimeout(updateHash, 1000);
+    }
+
+    function setOutput(val){
+      val = val.replace(/<equation>((.*?\n)*?.*?)<\/equation>/ig, function(a, b){
+        return '<img src="http://latex.codecogs.com/png.latex?' + encodeURIComponent(b) + '" />';
+      });
+
+      document.getElementById('out').innerHTML = marked(val);
+    }
+
+    var editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+      mode: 'gfm',
+      lineNumbers: false,
+      matchBrackets: true,
+      lineWrapping: true,
+      theme: 'default',
+      tabSize: 2,
+      keyMap: 'sublime',
+      extraKeys: {
+        "Shift-Cmd-A": onFold
+      },
+      foldGutter: true,
+      gutters: ["CodeMirror-foldgutter"],
+      onChange: update
+    });
+
+    // Toggle block folding
+    function onFold(){
+      editor.execCommand('goLineStart');
+      var pos = editor.getCursor();
+      var tok = editor.getTokenAt(pos);
+      editor.foldCode(pos, {
+        scanUp: true,
+        rangeFinder: CodeMirror.fold.markdown
+      });
+    }
+
+    CodeMirror.todoOverlay = {
+      token: function(stream, state) {
+        var ch;
+        if (stream.match("- [ ]")) {
+          return "emptyCheckbox checkbox";
+        }
+        if (stream.match("- [x]")) {
+          return "checkedCheckbox checkbox";
+        }
+        if (stream.match("- [>]")) {
+          return "waitingCheckbox checkbox";
+        }
+        if (stream.match("- [<]")) {
+          return "actionCheckbox checkbox";
+        }
+        if (stream.match("- [!]")) {
+          return "importantCheckbox checkbox";
+        }
+        while (stream.next() != null && !stream.match(/- \[.\]/g, false)) {}
+          return null;
+      }
+    };
+
+    editor.addOverlay(CodeMirror.todoOverlay);
+
+
+    // Massive click event handler for checkboxes
+    $('.CodeMirror-code').click('checkbox:after', function(event){
+      var pos = editor.getCursor();
+      var tok = editor.getTokenAt(pos);
+      onClick(pos, tok, event);
+    })
+
+    function onClick(pos, tok, event){
+      if($(event.target).hasClass('cm-checkbox')){
+        if($(event.target).hasClass('cm-checkedCheckbox')){
+          uncheckCheckbox(pos, tok);
+        } else {
+          checkCheckbox(pos, tok);
+        }
+      }
+    }
+
+    function uncheckCheckbox(pos, tok){
+      var states = {
+        'cm-emptyCheckbox':     '- [ ]',
+        'cm-checkedCheckbox':   '- [x]',
+        'cm-waitingCheckbox':   '- [>]',
+        'cm-actionCheckbox':    '- [<]',
+        'cm-importantCheckbox': '- [!]'
+      }
+      // If the checkbox is checked…
+      // TODO: check if even applicable!
+      var mark = editor.findMarksAt(pos)[0];
+      if(tok.state.lineSeen){
+        // …either revert to previous state
+        if(mark && mark.previousCheckboxState && states[mark.previousCheckboxState]){
+          var newString = tok.state.lineSeen.replace(/- \[.\]/g, states[mark.previousCheckboxState]);
+          editor.replaceRange(newString, {line: pos.line , ch:0}, {line:pos.line , ch:tok.state.lineSeen.length});
+          var mark = editor.markText({line: pos.line , ch:0}, {line:pos.line , ch:tok.state.lineSeen.length});
+        } else {
+          // …or make unchecked
+          var newString = tok.state.lineSeen.replace(/- \[.\]/g, "- [ ]");
+          editor.replaceRange(newString, {line: pos.line , ch:0}, {line:pos.line , ch:tok.state.lineSeen.length});
+          var mark = editor.markText({line: pos.line , ch:0}, {line:pos.line , ch:tok.state.lineSeen.length});
+        }
+      }
+      updateOutput();
+    }
+
+    function checkCheckbox(pos, tok){
+      // If the checkbox is not checked (not unchecked!)…
+      // TODO: check if even applicable!
+      // …make it checked
+      if(tok.state.lineSeen){
+        var newString = tok.state.lineSeen.replace(/- \[.\]/g, "- [x]");
+        editor.replaceRange(newString, {line: pos.line , ch:0}, {line:pos.line , ch:tok.state.lineSeen.length});
+        // …and remember what its previous state was
+        var mark = editor.markText({line: pos.line , ch:0}, {line:pos.line , ch:tok.state.lineSeen.length});
+        var classes = $(event.target).attr('class');
+        if(classes){
+          mark.previousCheckboxState = classes.match(/cm-[a-z]*Checkbox/)[0];
+        }
+        doParentChecking(pos.line);
+      }
+      updateOutput();
+    }
+
+    function getIndentation(line) {
+      var match = line.match(/^\s+/);
+      if(match){
+        return match[0].length;
+      } else {
+        return 0;
+      }
+    }
+
+    function doParentChecking(lineNumber){
+      var line = editor.getLine(lineNumber)
+      var indentation = getIndentation(line);
+      var parent;
+      // collect upwards
+      var continueUpwards = true;
+      var continueDownwards = false;
+      var currentLineNumber = lineNumber;
+      var currentLine;
+      var currentLineHandle;
+      while(continueUpwards){
+        currentLineNumber--;
+        currentLine = editor.getLine(currentLineNumber);
+        currentLineHandle = editor.getLineHandle(currentLineNumber);
+        // Only continue if this line is not more indented than the current one
+        if(getIndentation(currentLine) === indentation){
+          // Check whether this line is checked
+          if(!currentLine.match(/- \[x\]/)){
+            return;
+          }
+          // check if this is the parent
+        } else {
+          // Is a sub-item, ignore
+          if(getIndentation(currentLine) <= indentation){
+            continueUpwards = false;
+            if(getIndentation(currentLine) === indentation - 2){
+              parent = currentLineHandle;
+              continueDownwards = true;
+            } else {
+              return;
+            }
+          }
+        }
+      }
+      // Now we move downwards from the original line
+      currentLineNumber = lineNumber;
+      while(continueDownwards){
+        currentLineNumber++;
+        currentLine = editor.getLine(currentLineNumber);
+        currentLineHandle = editor.getLineHandle(currentLineNumber);
+        // check if this is indented less far and therefore the end
+        if(getIndentation(currentLine) < indentation){
+          continueDownwards = false;
+        } else {
+          if(getIndentation(currentLine) === indentation){
+            // Check whether this line is checked
+            if(!currentLine.match(/- \[x\]/)){
+              return;
+            }
+          }
+        }
+      }
+      // If we arrive here, we need to check the parent
+      var parentLineNumber = editor.getLineNumber(parent);
+      var pos = {line: parentLineNumber};
+      var tok = editor.getTokenAt(pos);
+      checkCheckbox(pos, tok);
+    }
+
+    document.addEventListener('drop', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+
+      var theFile = e.dataTransfer.files[0];
+      var theReader = new FileReader();
+      theReader.onload = function(e){
+        editor.setValue(e.target.result);
+      };
+
+      theReader.readAsText(theFile);
+    }, false);
+
+    function save(){
+      var code = editor.getValue();
+      var blob = new Blob([code], { type: 'text/plain' });
+      saveBlob(blob);
+    }
+
+    function saveBlob(blob){
+      var name = "untitled.md";
+      if(window.saveAs){
+        window.saveAs(blob, name);
+      }else if(navigator.saveBlob){
+        navigator.saveBlob(blob, name);
+      }else{
+        url = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+        link.setAttribute("href",url);
+        link.setAttribute("download",name);
+        var event = document.createEvent('MouseEvents');
+        event.initMouseEvent('click', true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+        link.dispatchEvent(event);
+      }
+    }
+
+    window.onresize = function(event){
+      editor.refresh();
+    }
+
+    function updateOutput(){
+      setOutput(editor.getValue());
+    }
+
+    // Update output on every keystroke
+    document.addEventListener('keyup', function(e){
+      updateOutput()
+    })
+
+    document.addEventListener('keydown', function(e){
+      // tab
+      if(e.keyCode == 9){
+        var pos = editor.getCursor();
+        var tok = editor.getTokenAt(pos);
+        var match = tok.state.lineSeen.match(/\s- \[ \]\s+$/m);
+        if(match){
+          editor.replaceRange('  '+tok.state.lineSeen.trimRight()+' ', {line: pos.line , ch:0},{line:pos.line , ch:tok.end+2});
+        }
+      }
+      // enter
+      if(e.keyCode == 13){
+        var pos = editor.getCursor();
+        var line = pos.line - 1;
+        var ch = pos.ch;
+        var tok = editor.getTokenAt({line: line, ch: ch});
+        var emptyTodoMatch = tok.state.lineSeen.match(/\s- \[ \]\s+$/m);
+        // double enter in list
+        if(emptyTodoMatch){
+          editor.execCommand('goLineUp');
+          editor.execCommand('deleteLine');
+          e.preventDefault();
+          return;
+        }
+        var match = tok.state.lineSeen.match(/\s- \[.\]/g);
+        if(match){
+          editor.replaceRange('- [ ] ', pos);
+        }
+      }
+      if(e.keyCode == 83 && (e.ctrlKey || e.metaKey)){
+        e.preventDefault();
+        save();
+        return false;
+      }
+    })
+
+    var hashto;
+
+    function updateHash(){
+      //window.location.hash = btoa(RawDeflate.deflate(unescape(encodeURIComponent(editor.getValue()))))
+    }
+
+    if(window.location.hash){
+      var h = window.location.hash.replace(/^#/, '');
+      if(h.slice(0,5) == 'view:'){
+        setOutput(decodeURIComponent(escape(RawDeflate.inflate(atob(h.slice(5))))));
+        document.body.className = 'view';
+      }else{
+        editor.setValue(decodeURIComponent(escape(RawDeflate.inflate(atob(h)))))
+        update(editor);
+        editor.focus();
+      }
+    }else{
+      update(editor);
+      editor.focus();
+    }
+
+    </script>
+  </body>
+  </html>
